@@ -1,22 +1,28 @@
 import typing
 import math
 
+
 class State(object):
 
     dimension_count: int = 2
     scale: typing.Tuple[float, ...] = (1.0, 1.0)
-    origin: typing.Tuple[float, ...] = (0, 0)
+    origin:  typing.Tuple[float, ...] = (0.0, 0.0)
 
     def __init__(self,
                  values: typing.Tuple[float, ...]):
         if len(values) != self.dimension_count:
             raise ValueError("state size does not match: found {}, expected {}".format(len(values), self.dimension_count))
         self.values: typing.Tuple[float, ...] = values
-        self.magnitude: float = self.distance(other=self.origin)
-        self.direction: typing.Tuple[float, ...] = self.atan(other=self.origin)
+
+    @property
+    def magnitude(self) -> float:
+        return self.distance(other=State.origin)
 
     def distance(self,
-                 other: typing.Tuple[float, ...]) -> float:
+                 other: typing.Union["State", typing.Tuple[float, ...]]) -> float:
+        if isinstance(other, State):
+            other = other.values
+
         return sum((p1 - p2) ** 2 for p1, p2 in zip(self.values, other)) ** 0.5
 
     def atan(self,
@@ -36,9 +42,45 @@ class State(object):
             dimension_count = len(scale)
         if scale is None:
             scale = [1.0 for i in range(dimension_count)]
-        cls.dimensions = dimension_count
+        cls.dimension_count = dimension_count
         cls.scale = scale
         cls.origin = tuple(0.0 for i in range(dimension_count))
+
+    def __add__(self, other: typing.Union["State", typing.Tuple[float, ...]]) -> "State":
+        if isinstance(other, State):
+            other = other.values
+        values = tuple(i + j for i, j in zip(self.values, other))
+        return State(values=values)
+
+    def __iadd__(self, other: typing.Union["State", typing.Tuple[float, ...]]) -> "State":
+        if isinstance(other, State):
+            other = other.values
+        self.values = tuple(i + j for i, j in zip(self.values, other))
+        return self
+
+    def __sub__(self, other: typing.Union["State", typing.Tuple[float,...]]) -> "State":
+        if isinstance(other, State):
+            other = other.values
+        values = tuple(i - j for i, j in zip(self.values, other))
+        return State(values=values)
+
+    def __neg__(self) -> "State":
+        return State(values=tuple(-x for x in self.values))
+
+    def __mul__(self, other: float) -> "State":
+        return State(values=tuple(x * other for x in self.values))
+
+    def normalize(self) -> "State":
+        return State(values=tuple(x / self.magnitude for x in self.values))
+
+    def direction(self, other: typing.Union["State", typing.Tuple[float, ...]]) -> typing.Tuple[float, ...]:
+        if isinstance(other, State):
+            other = other.values
+        diff = -(self - other)
+        return diff.normalize().values
+
+    def move(self, direction: typing.Tuple[float, ...], distance: float) -> "State":
+        return State(values=tuple(x + d * distance for x, d in zip(self.values, direction)))
 
 
 class StateList(typing.List[State]):

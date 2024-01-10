@@ -1,15 +1,88 @@
+import os.path
 import pickle
-# Load the replay buffer
-with open('10_03/10_03_5w.pkl', 'rb') as file:
-    replay_buffer = pickle.load(file)
-observations = replay_buffer.observations
-actions = replay_buffer.actions
-rewards = replay_buffer.rewards
-next_observations = replay_buffer.next_observations
-dones = replay_buffer.dones
-print(observations.shape)
+import cellworld
+from tlppo import *
+from hexa_world import CellworldParticleSource, CellworldLineOfSide, CellworldStatePathFinder
+
+world_name = "10_03"
+
+State.set_dimensions(dimension_count=5)
+state = State(values=(.5, .5, .5, .5, .5))
+state_path = [(0.0, 1.0, .75, 1.0, .25), (1.0, .40, .55, .6, .5)]
+particle = Particle(state=state)
+particle.path = state_path
+
+print(particle.state.values, particle.destination.values)
+for i in range(50):
+    particle = particle.evolve(delta_d=.1)
+    print(i, particle.state.values)
+
+State.set_dimensions(dimension_count=2)
+
+world = cellworld.World.get_from_parameters_names("hexagonal", "canonical", world_name)
+
+# for c in world.cells:
+#     c.location.x = round(c.location.x, 3)
+#     c.location.y = round(c.location.y, 3)
+
+particle_source = CellworldParticleSource(world=world)
+
+for i in range(20):
+    particle = particle_source.get_particle()
+    print(particle.state.values)
+
+path_builder = cellworld.Paths_builder.get_from_name("hexagonal", world_name)
+paths = cellworld.Paths(builder=path_builder, world=world)
+processed_paths_file_path = "processed_paths_%s" % world_name
+if os.path.exists(processed_paths_file_path):
+    with open(processed_paths_file_path, 'rb') as f:
+        processed_paths = pickle.load(f)
+else:
+    processed_paths = CellworldStatePathFinder.generate_paths(world=world, paths=paths)
+    with open(processed_paths_file_path, 'wb') as f:
+        pickle.dump(processed_paths, f)
+
+path_finder = CellworldStatePathFinder(processed_paths=processed_paths)
+los = CellworldLineOfSide(world=world)
+
+for i in range(20):
+    src = particle_source.get_particle().state.values
+    dst = particle_source.get_particle().state.values
+    while los.is_visible(src=src, dst=dst):
+        dst = particle_source.get_particle().state.values
+
+
+    path = path_finder.get_path(src=src, dst=dst)
+    particle = Particle(state=State(values=src))
+    particle.path = path
+
+    while particle.state.values != dst:
+        print(particle.state.values)
+        particle.evolve(delta_d=.001)
+    print(particle.state.values)
+    print(path)
 
 exit()
+import pickle
+import csv
+import json
+
+def read_csv(filename):
+    with open(filename, newline='') as csvfile:
+        spamreader = csv.reader(csvfile, delimiter=',', quotechar='"')
+        columns = []
+        items = []
+        for row in spamreader:
+            if columns:
+                items.append({k: json.loads(v) for k, v in zip(columns, row)})
+                # items.append([json.loads(v) for v in row])
+            else:
+                columns = row
+
+        return columns, items
+
+
+columns, items = read_csv('.\\10_03\\ICM10_03_5w.csv')
 
 
 import glob
@@ -39,16 +112,23 @@ def read(file_path):
 sources: typing.List[typing.Tuple[float]] = list()
 destinations: typing.List[typing.Tuple[float]] = list()
 
-for file_path in glob.glob("10_03/*.h5"):
-    replay = read(file_path)
-    for index, row in replay.iterrows():
+# for file_path in glob.glob("10_03/*.h5"):
+#     replay = read(file_path)
+#     for index, row in replay.iterrows():
+#         sources.append(tuple(row['state'][:2]))
+#         destinations.append(tuple(row['next_state'][:2]))
+
+for file_path in glob.glob("10_03/*.csv"):
+    columns, replay = read_csv(file_path)
+    for row in replay:
         sources.append(tuple(row['state'][:2]))
         destinations.append(tuple(row['next_state'][:2]))
 
 
+
 depth = 1
 state_count = 100
-lppo_count = 10
+lppo_count = 20
 
 clusters = Clusters(data_points=sources+destinations, cluster_count=state_count)
 

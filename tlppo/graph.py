@@ -48,6 +48,8 @@ class Graph(object):
                 prev_step = step
             self.costs[src_label][dst_label] = cost
             self.edges[src_label][dst_label] = path
+            self.edges[dst_label][src_label] = [i for i in path[::-1]]
+            self.costs[dst_label][src_label] = cost
 
     def get_centrality(self, depth: int = 3) -> typing.Dict[int, float]:
         max_iter = depth
@@ -69,19 +71,12 @@ class Graph(object):
         centrality = self.get_centrality(depth=depth)
         planning_index: typing.Dict[int, float] = dict()
         for label, connections in self.edges.items():
-            # min_centrality = 1
-            # max_centrality = 0
             max_diff = 0
             for conn_label in connections:
                 diff = abs(centrality[conn_label]-centrality[label])
                 if diff > max_diff:
                     max_diff = diff
-                # if centrality[conn_label] > max_centrality:
-                #     max_centrality = centrality[conn_label]
-                # if centrality[conn_label] < min_centrality:
-                #     min_centrality = centrality[conn_label]
-            # planning_index[label] = max_centrality - min_centrality
-            planning_index[label] = max_diff
+            planning_index[label] = max_diff / centrality[label]
         return sorted(planning_index, key=planning_index.get, reverse=True)[:n]
 
     def get_subgraph(self, nodes: typing.List[int]):
