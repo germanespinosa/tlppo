@@ -2,7 +2,7 @@ import typing
 
 
 class Clusters(object):
-    def __init__(self, data_points: typing.List[typing.Tuple[float]], cluster_count=100):
+    def __init__(self, data_points: typing.List[typing.Tuple[float, ...]], cluster_count=100):
         self.data_points = data_points
         self.cluster_count = cluster_count
         from sklearn.cluster import KMeans
@@ -10,7 +10,7 @@ class Clusters(object):
         self.kmeans.fit(self.data_points)
         self.centroids = self.kmeans.cluster_centers_
 
-    def get_labels(self, data_points: typing.List[typing.Tuple[float]]) -> typing.List[int]:
+    def get_labels(self, data_points: typing.List[typing.Tuple[float, ...]]) -> typing.List[int]:
         labels = self.kmeans.predict(data_points)
         return labels
 

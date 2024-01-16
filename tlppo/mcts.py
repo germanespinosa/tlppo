@@ -89,9 +89,5 @@ class Tree(object):
         self.graph: Graph = graph
         state = State(values=values)
         self.root = TreeNode(state=state, graph=self.graph, parent=None, label=-1)
-        for label, edges in graph.edges.items():
-            if not edges:
-                continue
-            child = TreeNode(label=label, state=graph.nodes[label].state, graph=graph, parent=self.root)
-            self.root.children.append(child)
+
 
