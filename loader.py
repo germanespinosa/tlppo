@@ -1,4 +1,3 @@
-import pickle
 import typing
 import glob
 import h5py
@@ -7,7 +6,6 @@ import tlppo
 import csv
 import json
 import cellworld
-import os
 import hexaworld
 
 
@@ -91,15 +89,18 @@ class Loader(object):
     def create_lppo_graph(graph: tlppo.Graph,
                           lppo_count: int,
                           depth: int) -> tlppo.Graph:
-        lppo = graph.get_lppo(n=lppo_count, depth=depth)
-        tlppo_graph = graph.get_subgraph(nodes=lppo)
-        return tlppo_graph, lppo
+        lppos = graph.get_lppo(n=lppo_count, depth=depth)
+        tlppo_graph = graph.get_subgraph(nodes=lppos)
+        goal = tlppo_graph.add_node(state=tlppo.State(values=(1, .5)))
+        for lppo in lppos:
+            tlppo_graph.connect(lppo, goal.label)
+        return tlppo_graph, lppos
 
     @staticmethod
-    def create_particle_filter(paths: cellworld.Paths,
-                               line_of_sight: hexaworld.LineOfSight) -> hexaworld.CellworldParticleFilter:
+    def create_belief_state(paths: cellworld.Paths,
+                            line_of_sight: hexaworld.LineOfSight) -> hexaworld.CellworldBeliefState:
         path_finder = hexaworld.PathFinder(paths=paths, line_of_sight=line_of_sight)
-        return hexaworld.CellworldParticleFilter(world=paths.world, path_finder=path_finder)
+        return hexaworld.CellworldBeliefState(world=paths.world, path_finder=path_finder, size=100, attempts=200)
 
     @staticmethod
     def create_tree(graph: tlppo.Graph,
@@ -115,3 +116,14 @@ class Loader(object):
                                                          state=node.state,
                                                          parent=tree.root))
         return tree
+
+    @staticmethod
+    def create_spatial_graph(world: cellworld.World):
+        graph = tlppo.Graph()
+        for cell in world.cells:
+            graph.add_node(state=tlppo.State(values=hexaworld.to_tuple(cell.location)), label=cell.id)
+        cell_graph = cellworld.Graph.create_connection_graph(world=world)
+        for cell in world.cells:
+            for conn in cell_graph[cell]:
+                graph.connect(cell.id, conn)
+        return graph

@@ -69,11 +69,13 @@ class TreeNode(object):
         return random.choice(best_children)
 
     def propagate_reward(self,
-                         reward: float):
+                         reward: float,
+                         discount: float):
         self.value = self.value + reward
         self.visits += 1
         if self.parent:
-            self.parent.propagate_reward(reward=reward)
+            self.parent.propagate_reward(reward=reward * (1-discount),
+                                         discount=discount)
 
     def print(self, level: int = 0):
         if level:

@@ -17,7 +17,8 @@ class Planner:
                    tree: Tree,
                    belief_state: BeliefState,
                    depth: int = -1,
-                   iterations: int = -1) -> State:
+                   iterations: int = -1,
+                   discount: float = .1) -> State:
         if depth == -1:
             depth = self.depth
         if iterations == -1:
@@ -36,7 +37,7 @@ class Planner:
                 reward += state_reward
                 if not _continue:
                     break
-            node.propagate_reward(reward=reward)
+            node.propagate_reward(reward=reward, discount=discount)
         return tree.root.select(0).state
 
 

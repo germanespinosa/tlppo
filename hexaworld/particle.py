@@ -74,39 +74,47 @@ class CellworldParticle(tlppo.Particle):
         return evolved
 
 
-class CellworldParticleFilter(tlppo.ParticleFilter):
+class CellworldBeliefState(tlppo.BeliefState):
     def __init__(self,
                  world: cellworld.World,
-                 path_finder: PathFinder):
+                 path_finder: PathFinder,
+                 size: int = 100,
+                 attempts: int = 200):
         self.cell_centers: typing.List[typing.Tuple[float, ...]] = [(cell.location.x, cell.location.y) for cell in world.cells if not cell.occluded]
         self.line_of_sight = LineOfSight(world=world)
         self.path_finder = path_finder
+        self.size = size
+        self.attempts = attempts
         super().__init__()
         self.history: typing.List[CellworldObservation] = list()
-        self.last_observation: typing.Union[CellworldObservation, None] = None
-        self.full_view_particle: typing.Union[CellworldParticle, None] = None
+        self.particles: typing.List[CellworldParticle] = list()
+        self.full_view_particle = None
 
     def update_history(self, observation: CellworldObservation) -> None:
-        self.history.append(observation)
-        self.last_observation = observation
-        if self.last_observation.predator:
-            self.full_view_particle = CellworldParticle(state=tlppo.State(values=self.last_observation.predator),
+        if observation.predator:
+            self.particles.clear()
+            for i in range(self.size):
+                self.particles.append(CellworldParticle(state=tlppo.State(values=observation.predator),
                                                         line_of_sight=self.line_of_sight,
-                                                        path_finder=self.path_finder)
+                                                        path_finder=self.path_finder,
+                                                        path=[observation.prey]))
         else:
             self.full_view_particle = None
-
-    def is_valid(self, particle: CellworldParticle) -> bool:
-        last_observation = self.history[-1]
-        if self.full_view_particle:
-            return False
-        else:
-            return not self.line_of_sight(src=last_observation.prey, dst=particle.state)
-
-    def new_particle(self) -> CellworldParticle:
-        if self.full_view_particle:
-            return self.full_view_particle
-        else:
-            return CellworldParticle(state=tlppo.State(values=random.choice(self.cell_centers)),
-                                     line_of_sight=self.line_of_sight,
-                                     path_finder=self.path_finder)
+            if self.history:
+                for i in range(len(self.particles)):
+                    self.particles[i] = self.particles[i].evolve(state=tlppo.State(self.history[-1].prey),
+                                                                 next_state=tlppo.State(observation.prey))
+            filtered: typing.List[CellworldParticle] = list()
+            for particle in self.particles:
+                if not self.line_of_sight(observation.prey, particle.state):
+                    filtered.append(particle)
+            self.particles = filtered
+            for a in range(self.attempts):
+                candidate = random.choice(self.cell_centers)
+                if not self.line_of_sight(observation.prey, candidate):
+                    self.particles.append(CellworldParticle(state=tlppo.State(values=candidate),
+                                                            line_of_sight=self.line_of_sight,
+                                                            path_finder=self.path_finder))
+                if len(self.particles) >= self.size:
+                    break
+        tlppo.BeliefState.update_history(self, observation=observation)
