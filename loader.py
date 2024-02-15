@@ -110,7 +110,7 @@ class Loader(object):
         for label, node in graph.nodes.items():
             if not graph.edges[label]:
                 continue
-            if line_of_sight(values, node.state):
+            if line_of_sight(values, node.state.values):
                 tree.root.children.append(tlppo.TreeNode(graph=graph,
                                                          label=node.label,
                                                          state=node.state,
@@ -127,3 +127,48 @@ class Loader(object):
             for conn in cell_graph[cell]:
                 graph.connect(cell.id, conn)
         return graph
+
+    arrows = []
+    @staticmethod
+    def clear_tree(display: cellworld.Display):
+        for arrow in Loader.arrows:
+            display.arrow(beginning=cellworld.Location(0, 0),
+                          ending=cellworld.Location(0, 0),
+                          existing_arrow=arrow,
+                          alpha=0)
+
+
+    @staticmethod
+    def plot_tree(tree: tlppo.Tree, display: cellworld.Display):
+        def plot_node(node: tlppo.TreeNode, alpha: float):
+            node_location = hexaworld.to_location(node.state.values)
+            #display.circle(location=node_location, radius=.01, color="purple")
+            if node.children:
+                max_visits = max([child.visits for child in node.children])
+            else:
+                max_visits = 0
+            for child in node.children:
+                if child.visits == 0:
+                    continue
+                child_location = hexaworld.to_location(child.state.values)
+                child_alpha = alpha * child.visits / max_visits
+                if plot_node.arrow_count < len(Loader.arrows):
+                    existing_arrow = Loader.arrows[plot_node.arrow_count]
+                    display.arrow(beginning=node_location,
+                                  ending=child_location,
+                                  color="purple",
+                                  alpha=child_alpha,
+                                  existing_arrow=existing_arrow,
+                                  zorder=-0)
+                    plot_node.arrow_count += 1
+                else:
+                    new_arrow = display.arrow(beginning=node_location,
+                                              ending=child_location,
+                                              color="purple",
+                                              alpha=child_alpha,
+                                              zorder=-0)
+
+                    Loader.arrows.append(new_arrow)
+                #plot_node(node=child, alpha=child_alpha)
+        plot_node.arrow_count = 0
+        plot_node(node=tree.root, alpha=1.0)

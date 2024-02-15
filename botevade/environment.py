@@ -13,13 +13,13 @@ class Environment:
                  freq: int = 100,
                  has_predator: bool = False,
                  real_time: bool = True,
-                 prey_agent: Agent=None):
+                 prey_agent: Agent = None):
         self.world = cellworld.World.get_from_parameters_names("hexagonal", "canonical", world_name)
         self.model = Model(pworld=self.world, freq=freq, real_time=real_time)
         self.goal_location = cellworld.Location(1, .5)
         self.start_location = cellworld.Location(0, .5)
         self.has_predator = has_predator
-        self.goal_threshold = self.world.implementation.cell_transformation.size / 2
+        self.goal_threshold = self.world.implementation.cell_transformation.size
         self.capture_threshold = self.world.implementation.cell_transformation.size
         self.model.add_agent("prey",
                              prey_agent,

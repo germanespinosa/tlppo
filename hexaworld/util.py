@@ -5,4 +5,3 @@ def to_tuple(location: cellworld.Location) -> tuple:
 
 def to_location(value: tuple) -> cellworld.Location:
     return cellworld.Location(value[0], value[1])
-

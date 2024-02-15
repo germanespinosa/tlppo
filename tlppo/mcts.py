@@ -22,22 +22,22 @@ class TreeNode(object):
         self.visits: int = 0
 
     def ucb1(self,
-             c: float) -> float:
+             c: float = math.sqrt(2)) -> float:
         if self.visits > 0:
-            exploitation = self.value / self.visits
+            expected_reward = self.value / self.visits
         else:
-            exploitation = 0
+            expected_reward = 0
         if c:
             if self.parent and self.parent.visits > 0:
                 if self.visits > 0:
-                    exploration = c * math.sqrt(math.log(self.parent.visits) / self.visits)
+                    exploration = c * math.sqrt(2 * math.log(self.parent.visits) / self.visits)
                 else:
                     exploration = sys.float_info.max
             else:
                 exploration = 0
         else:
             exploration = 0
-        return exploitation + exploration
+        return expected_reward + exploration
 
     def expand(self):
         connections = self.graph.edges[self.label]
@@ -68,10 +68,11 @@ class TreeNode(object):
                 best_children.append(child)
         return random.choice(best_children)
 
+
     def propagate_reward(self,
                          reward: float,
                          discount: float):
-        self.value = self.value + reward
+        self.value += reward
         self.visits += 1
         if self.parent:
             self.parent.propagate_reward(reward=reward * (1-discount),

@@ -1,3 +1,5 @@
+import math
+
 from .mcts import Tree
 from .state import State
 from .evaluation import EvaluationFunction
@@ -18,7 +20,8 @@ class Planner:
                    belief_state: BeliefState,
                    depth: int = -1,
                    iterations: int = -1,
-                   discount: float = .1) -> State:
+                   discount: float = .1,
+                   exploration: float = math.sqrt(2)) -> State:
         if depth == -1:
             depth = self.depth
         if iterations == -1:
@@ -29,15 +32,13 @@ class Planner:
             particle = belief_state.get_particle()
             state = node.state
             for d in range(depth):
-                node = node.select(c=0.5)
+                node = node.select(c=exploration)
                 next_state = node.state
-                particle = particle.evolve(state=state, next_state=next_state)
+                particle = particle.project(state=state,
+                                            next_state=next_state)
                 state = next_state
-                state_reward, _continue = self.evaluation_function.evaluate(state=state, particle=particle)
-                reward += state_reward
+                reward, _continue = self.evaluation_function.evaluate(state=state, particle=particle)
                 if not _continue:
                     break
             node.propagate_reward(reward=reward, discount=discount)
         return tree.root.select(0).state
-
-

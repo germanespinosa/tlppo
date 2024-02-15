@@ -5,9 +5,9 @@ from .observation import Observation
 
 
 class Particle(object):
-    def evolve(self,
-               state: State,
-               next_state: State) -> "Particle":
+    def project(self,
+                state: State,
+                next_state: State) -> "Particle":
         raise NotImplementedError()
 
 

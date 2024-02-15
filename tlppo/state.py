@@ -1,5 +1,6 @@
 import typing
 import math
+from .util import distance
 
 
 class State(object):
@@ -23,7 +24,7 @@ class State(object):
         if isinstance(other, State):
             other = other.values
 
-        return sum((p1 - p2) ** 2 for p1, p2 in zip(self.values, other)) ** 0.5
+        return distance(self.values, other)
 
     def atan(self,
              other: typing.Tuple[float, ...]) -> typing.Tuple[float, ...]:

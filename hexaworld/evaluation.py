@@ -25,14 +25,15 @@ class CellworldEvaluationFunction(tlppo.EvaluationFunction):
         _continue = True
 
         distance_to_goal = state.distance(other=self.goal)
-        if self.goal_radius > distance_to_goal:
-            reward += self.goal_reward
-            _continue = False
         reward += distance_to_goal * self.distance_to_goal_reward
 
-        distance_to_predator = state.distance(other=particle.state)
+        distance_to_predator = state.distance(other=particle.values)
         if self.capture_radius > distance_to_predator:
             reward += self.capture_reward
             _continue = False
+        else:
+            if self.goal_radius > distance_to_goal:
+                reward += self.goal_reward
+                _continue = False
         reward += distance_to_predator * self.distance_to_predator_reward
         return reward, _continue
